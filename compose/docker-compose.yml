@@ -401,6 +401,9 @@ services:
       - 14250:14250
       - 5778:5778
       - 9411:9411
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
   otel_collector:
     container_name: opentelemetry-collector
     #image: otel/opentelemetry-collector-contrib:0.116.1
