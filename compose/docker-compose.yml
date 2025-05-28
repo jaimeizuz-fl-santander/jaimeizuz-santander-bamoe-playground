@@ -1,0 +1,465 @@
+services:
+  kogito-bpmn-app-patched:
+    container_name: kogito-bpmn-app-patched
+    image: dev.local/kogito/kogito-bpmn-app-patched:1.0.0-SNAPSHOT
+    profiles:
+      - kogito-bpmn-apps-patched
+      - full
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1536M
+        reservations:
+          memory: 600M
+    ports:
+      - 8080:8080
+      - 12346:12346
+    environment:
+      JAVA_OPTS: >
+        -XX:MaxRAMPercentage=80.0
+        -XX:+UseG1GC
+        -XX:MinHeapFreeRatio=10
+        -XX:MaxHeapFreeRatio=20
+        -XX:GCTimeRatio=4
+        -XX:AdaptiveSizePolicyWeight=90
+        -XX:+ExitOnOutOfMemoryError
+        -Djava.util.logging.manager=org.jboss.logmanager.LogManager
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8558
+        -Dcom.sun.management.jmxremote
+        -Dcom.sun.management.jmxremote.port=12346
+        -Dcom.sun.management.jmxremote.rmi.port=12346
+        -Dcom.sun.management.jmxremote.authenticate=false
+        -Dcom.sun.management.jmxremote.ssl=false
+        -Dcom.sun.management.jmxremote.host=0.0.0.0
+        -Djava.rmi.server.hostname=localhost
+      KOGITO_PERSISTENCE_PROTO_MARSHALLER: "false"
+      QUARKUS_HTTP_CORS_ORIGINS: /.*/
+      # The number if IO threads used to perform IO. This will be automatically set to a reasonable value based on the number of CPU cores if it is not provided.
+      # If this is set to a higher value than the number of Vert.x event loops then it will be capped at the number of event loops.
+      # In general this should be controlled by setting quarkus.vertx.event-loops-pool-size, this setting should only be used if you want to limit the number
+      # of HTTP io threads to a smaller number than the total number of IO threads.
+      # QUARKUS_HTTP_IO_THREADS: 5
+      # The number of event loops. By default, it matches the number of CPUs detected on the system.
+      # QUARKUS_VERTX_EVENT_LOOPS_POOL_SIZE: 5
+      # The maximum number of threads. If this is not specified then it will be automatically sized to the greatest of 8 * the number of available processors and 200.
+      # For example if there are 4 processors the max threads will be 200. If there are 48 processors it will be 384.
+      QUARKUS_THREAD_POOL_MAX_THREADS: 300
+      # See https://quarkus.io/guides/datasource#jdbc-configuration
+      QUARKUS_DATASOURCE_JDBC_URL: 'jdbc:postgresql://postgres-kogito-patched:5432/kogito'
+      QUARKUS_DATASOURCE_USERNAME: kogito-user
+      QUARKUS_DATASOURCE_PASSWORD: kogito-pass
+      QUARKUS_DATASOURCE_DB_KIND: postgresql
+      QUARKUS_DATASOURCE_JDBC_ENABLE_METRICS: "true"
+      QUARKUS_DATASOURCE_JDBC_METRICS_ENABLED: "true"
+      QUARKUS_DATASOURCE_JDBC_INITIAL_SIZE: 20
+      QUARKUS_DATASOURCE_JDBC_MIN_SIZE: 20
+      QUARKUS_DATASOURCE_JDBC_MAX_SIZE: 80
+      QUARKUS_DATASOURCE__PROCESSPAAS__JDBC_URL: 'jdbc:postgresql://postgres-process-paas:5432/processpaas'
+      QUARKUS_DATASOURCE__PROCESSPAAS__USERNAME: paas-user
+      QUARKUS_DATASOURCE__PROCESSPAAS__PASSWORD: paas-pass
+      QUARKUS_DATASOURCE__PROCESSPAAS__DB_KIND: postgresql
+      QUARKUS_DATASOURCE__PROCESSPAAS__JDBC_ENABLE_METRICS: "true"
+      QUARKUS_DATASOURCE__PROCESSPAAS__JDBC_METRICS_ENABLED: "true"
+      QUARKUS_DATASOURCE__PROCESSPAAS__JDBC_INITIAL_SIZE: 20
+      QUARKUS_DATASOURCE__PROCESSPAAS__JDBC_MIN_SIZE: 20
+      QUARKUS_DATASOURCE__PROCESSPAAS__JDBC_MAX_SIZE: 80
+      # The interval at which we validate idle connections in the background. Set to 0 to disable background validation. DEFAULT: 2M
+      # QUARKUS_DATASOURCE_JDBC_BACKGROUND_VALIDATION_INTERVAL: 2M
+      # Perform foreground validation on connections that have been idle for longer than the specified interval. DEFAULT: null
+      # QUARKUS_DATASOURCE_JDBC_FOREGROUND_VALIDATION_INTERVAL: 15S
+      # The timeout before cancelling the acquisition of a new connection. DEFAULT: 5S
+      # QUARKUS_DATASOURCE_JDBC_ACQUISITION_TIMEOUT: 5S
+      # The interval at which we check for connection leaks. DEFAULT: disabled
+      # QUARKUS_DATASOURCE_JDBC_LEAK_DETECTION_INTERVAL: 10M
+      # The interval at which we try to remove idle connections. DEFAULT: 5M
+      # QUARKUS_DATASOURCE_JDBC_IDLE_REMOVAL_INTERVAL: 5M
+      # The max lifetime of a connection. DEFAULT: disabled
+      # QUARKUS_DATASOURCE_JDBC_MAX_LIFETIME: 1M
+      # The transaction isolation level. DEFAULT: null
+      # QUARKUS_DATASOURCE_JDBC_TRANSACTION_ISOLATION_LEVEL: undefined, none, read-uncommitted, read-committed, repeatable-read, serializable
+      KOGITO_SERVICE_URL: 'http://localhost:8080'
+      KOGITO_DATA_INDEX_URL: 'http://localhost:8080'
+      KOGITO_DATAINDEX_HTTP_URL: 'http://localhost:8080'
+      KOGITO_JOBS_SERVICE_URL: 'http://localhost:8080'
+      # The current chunk size in minutes the scheduler handles, it is used to keep a limit number of jobs scheduled
+      # in the in-memory scheduler.
+      #KOGITO_JOBS-SERVICE_SCHEDULERCHUNKINMINUTES: 10
+      # The interval the job loading method runs to fetch the persisted jobs from the repository.
+      #KOGITO_JOBS-SERVICE_LOADJOBINTERVALINMINUTES: 10
+      # The interval based on the current time the job loading method uses to fetch jobs "FROM (now -
+      # {@link #loadJobFromCurrentTimeIntervalInMinutes}) TO {@link #schedulerChunkInMinutes}"
+      #KOGITO_JOBS-SERVICE_LOADJOBFROMCURRENTTIMEINTERVALINMINUTES: 0
+      # Number of retries configured for the periodic jobs loading procedure. Every time the procedure is started this
+      # value is considered.
+      KOGITO_JOBS-SERVICE_LOADJOBRETRIES: 3
+      # Error strategy to apply when the periodic jobs loading procedure has exceeded the jobLoadReties. NONE, FAIL_SERVICE
+      #KOGITO_JOBS-SERVICE_LOADJOBERRORSTRATEGY: FAIL_SERVICE
+      KOGITO_JOBS-SERVICE_FORCEEXECUTEEXPIREDJOBS: "true"
+      KOGITO_JOBS-SERVICE_FORCEEXECUTEEXPIREDJOBSONSERVICESTART: "true"
+      QUARKUS_OTEL_LOGS_ENABLED: "true"
+      QUARKUS_OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: http://opentelemetry-collector:4317
+      QUARKUS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://opentelemetry-collector:4317
+      QUARKUS_DATASOURCE_JDBC_TELEMETRY: "true"
+      QUARKUS_DATASOURCE_JDBC_TELEMETRY_ENABLED: "true"
+      KIE_FLYWAY_ENABLED: "true"
+      KOGITO_PROCESSES_TRANSACTIONENABLED: "true"
+      KOGITO_USERTASKS_TRANSACTIONENABLED: "true"
+      QUARKUS_REST_CLIENT__DUMMY_REST_SERVICE__URL: http://wiremock:19002
+    depends_on:
+      postgres-kogito-patched:
+        condition: service_started
+  kogito-bpmn-app-non-patched:
+    container_name: kogito-bpmn-app-non-patched
+    image: dev.local/kogito/kogito-bpmn-app-non-patched:1.0.0-SNAPSHOT
+    profiles:
+      - kogito-bpmn-apps-non-patched
+      - full
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1536M
+        reservations:
+          memory: 600M
+    ports:
+      - 8081:8080
+      - 12347:12347
+    environment:
+      JAVA_OPTS: >
+        -XX:MaxRAMPercentage=80.0
+        -XX:+UseG1GC
+        -XX:MinHeapFreeRatio=10
+        -XX:MaxHeapFreeRatio=20
+        -XX:GCTimeRatio=4
+        -XX:AdaptiveSizePolicyWeight=90
+        -XX:+ExitOnOutOfMemoryError
+        -Djava.util.logging.manager=org.jboss.logmanager.LogManager
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8558
+        -Dcom.sun.management.jmxremote
+        -Dcom.sun.management.jmxremote.port=12347
+        -Dcom.sun.management.jmxremote.rmi.port=12347
+        -Dcom.sun.management.jmxremote.authenticate=false
+        -Dcom.sun.management.jmxremote.ssl=false
+        -Dcom.sun.management.jmxremote.host=0.0.0.0
+        -Djava.rmi.server.hostname=localhost
+      KOGITO_PERSISTENCE_PROTO_MARSHALLER: "false"
+      QUARKUS_HTTP_CORS_ORIGINS: /.*/
+      # The number if IO threads used to perform IO. This will be automatically set to a reasonable value based on the number of CPU cores if it is not provided.
+      # If this is set to a higher value than the number of Vert.x event loops then it will be capped at the number of event loops.
+      # In general this should be controlled by setting quarkus.vertx.event-loops-pool-size, this setting should only be used if you want to limit the number
+      # of HTTP io threads to a smaller number than the total number of IO threads.
+      # QUARKUS_HTTP_IO_THREADS: 5
+      # The number of event loops. By default, it matches the number of CPUs detected on the system.
+      # QUARKUS_VERTX_EVENT_LOOPS_POOL_SIZE: 5
+      # The maximum number of threads. If this is not specified then it will be automatically sized to the greatest of 8 * the number of available processors and 200.
+      # For example if there are 4 processors the max threads will be 200. If there are 48 processors it will be 384.
+      QUARKUS_THREAD_POOL_MAX_THREADS: 300
+      # See https://quarkus.io/guides/datasource#jdbc-configuration
+      QUARKUS_DATASOURCE_JDBC_URL: 'jdbc:postgresql://postgres-kogito-non-patched:5432/kogito'
+      QUARKUS_DATASOURCE_USERNAME: kogito-user
+      QUARKUS_DATASOURCE_PASSWORD: kogito-pass
+      QUARKUS_DATASOURCE_DB_KIND: postgresql
+      QUARKUS_DATASOURCE_JDBC_ENABLE_METRICS: "true"
+      QUARKUS_DATASOURCE_JDBC_METRICS_ENABLED: "true"
+      QUARKUS_DATASOURCE_JDBC_INITIAL_SIZE: 20
+      QUARKUS_DATASOURCE_JDBC_MIN_SIZE: 20
+      QUARKUS_DATASOURCE_JDBC_MAX_SIZE: 80
+      QUARKUS_DATASOURCE__PROCESSPAAS__JDBC_URL: 'jdbc:postgresql://postgres-process-paas:5432/processpaas'
+      QUARKUS_DATASOURCE__PROCESSPAAS__USERNAME: paas-user
+      QUARKUS_DATASOURCE__PROCESSPAAS__PASSWORD: paas-pass
+      QUARKUS_DATASOURCE__PROCESSPAAS__DB_KIND: postgresql
+      QUARKUS_DATASOURCE__PROCESSPAAS__JDBC_ENABLE_METRICS: "true"
+      QUARKUS_DATASOURCE__PROCESSPAAS__JDBC_METRICS_ENABLED: "true"
+      QUARKUS_DATASOURCE__PROCESSPAAS__JDBC_INITIAL_SIZE: 20
+      QUARKUS_DATASOURCE__PROCESSPAAS__JDBC_MIN_SIZE: 20
+      QUARKUS_DATASOURCE__PROCESSPAAS__JDBC_MAX_SIZE: 80
+      # The interval at which we validate idle connections in the background. Set to 0 to disable background validation. DEFAULT: 2M
+      # QUARKUS_DATASOURCE_JDBC_BACKGROUND_VALIDATION_INTERVAL: 2M
+      # Perform foreground validation on connections that have been idle for longer than the specified interval. DEFAULT: null
+      # QUARKUS_DATASOURCE_JDBC_FOREGROUND_VALIDATION_INTERVAL: 15S
+      # The timeout before cancelling the acquisition of a new connection. DEFAULT: 5S
+      # QUARKUS_DATASOURCE_JDBC_ACQUISITION_TIMEOUT: 5S
+      # The interval at which we check for connection leaks. DEFAULT: disabled
+      # QUARKUS_DATASOURCE_JDBC_LEAK_DETECTION_INTERVAL: 10M
+      # The interval at which we try to remove idle connections. DEFAULT: 5M
+      # QUARKUS_DATASOURCE_JDBC_IDLE_REMOVAL_INTERVAL: 5M
+      # The max lifetime of a connection. DEFAULT: disabled
+      # QUARKUS_DATASOURCE_JDBC_MAX_LIFETIME: 1M
+      # The transaction isolation level. DEFAULT: null
+      # QUARKUS_DATASOURCE_JDBC_TRANSACTION_ISOLATION_LEVEL: undefined, none, read-uncommitted, read-committed, repeatable-read, serializable
+      KOGITO_SERVICE_URL: 'http://localhost:8080'
+      KOGITO_DATA_INDEX_URL: 'http://localhost:8080'
+      KOGITO_DATAINDEX_HTTP_URL: 'http://localhost:8080'
+      KOGITO_JOBS_SERVICE_URL: 'http://localhost:8080'
+      # The current chunk size in minutes the scheduler handles, it is used to keep a limit number of jobs scheduled
+      # in the in-memory scheduler.
+      #KOGITO_JOBS-SERVICE_SCHEDULERCHUNKINMINUTES: 10
+      # The interval the job loading method runs to fetch the persisted jobs from the repository.
+      #KOGITO_JOBS-SERVICE_LOADJOBINTERVALINMINUTES: 10
+      # The interval based on the current time the job loading method uses to fetch jobs "FROM (now -
+      # {@link #loadJobFromCurrentTimeIntervalInMinutes}) TO {@link #schedulerChunkInMinutes}"
+      #KOGITO_JOBS-SERVICE_LOADJOBFROMCURRENTTIMEINTERVALINMINUTES: 0
+      # Number of retries configured for the periodic jobs loading procedure. Every time the procedure is started this
+      # value is considered.
+      KOGITO_JOBS-SERVICE_LOADJOBRETRIES: 3
+      # Error strategy to apply when the periodic jobs loading procedure has exceeded the jobLoadReties. NONE, FAIL_SERVICE
+      #KOGITO_JOBS-SERVICE_LOADJOBERRORSTRATEGY: FAIL_SERVICE
+      KOGITO_JOBS-SERVICE_FORCEEXECUTEEXPIREDJOBS: "true"
+      KOGITO_JOBS-SERVICE_FORCEEXECUTEEXPIREDJOBSONSERVICESTART: "true"
+      QUARKUS_OTEL_LOGS_ENABLED: "true"
+      QUARKUS_OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: http://opentelemetry-collector:4317
+      QUARKUS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://opentelemetry-collector:4317
+      QUARKUS_DATASOURCE_JDBC_TELEMETRY: "true"
+      QUARKUS_DATASOURCE_JDBC_TELEMETRY_ENABLED: "true"
+      KIE_FLYWAY_ENABLED: "true"
+      KOGITO_PROCESSES_TRANSACTIONENABLED: "true"
+      KOGITO_USERTASKS_TRANSACTIONENABLED: "true"
+      QUARKUS_REST_CLIENT__DUMMY_REST_SERVICE__URL: http://wiremock:19002
+    depends_on:
+      postgres-kogito-non-patched:
+        condition: service_started
+  kogito-management-console:
+    container_name: kogito-management-console
+    image: apache/incubator-kie-kogito-management-console:main
+    #image: quay.io/bamoe/management-console:9.2.0-ibm-0004
+    profiles:
+      - full
+      - kogito-management-console
+    ports:
+      - '8280:8080'
+  postgres-kogito-patched:
+    container_name: postgres-kogito-patched
+    image: 'postgres:16.8-alpine3.21'
+    profiles:
+      - full
+      - kogito-database
+    ports:
+      - '5432:5432'
+    volumes:
+      - './sql/postgres-kogito-patched:/docker-entrypoint-initdb.d:Z'
+      - './sql/postgres-kogito-patched/postgresql.conf:/etc/postgresql.conf'
+    command:
+      postgres -c config_file=/etc/postgresql.conf
+    healthcheck:
+      test:
+        - CMD
+        - pg_isready
+        - '-q'
+        - '-d'
+        - kogito
+        - '-U'
+        - kogito-user
+      timeout: 45s
+      interval: 10s
+      retries: 50
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+  postgres-kogito-non-patched:
+    container_name: postgres-kogito-non-patched
+    image: 'postgres:16.8-alpine3.21'
+    profiles:
+      - full
+      - kogito-database
+    ports:
+      - '5433:5432'
+    volumes:
+      - './sql/postgres-kogito-non-patched:/docker-entrypoint-initdb.d:Z'
+      - './sql/postgres-kogito-non-patched/postgresql.conf:/etc/postgresql.conf'
+    command:
+      postgres -c config_file=/etc/postgresql.conf
+    healthcheck:
+      test:
+        - CMD
+        - pg_isready
+        - '-q'
+        - '-d'
+        - kogito
+        - '-U'
+        - kogito-user
+      timeout: 45s
+      interval: 10s
+      retries: 50
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+  postgres-process-paas:
+    container_name: postgres-process-paas
+    image: 'postgres:16.8-alpine3.21'
+    profiles:
+      - full
+      - kogito-database
+    ports:
+      - '5434:5432'
+    volumes:
+      - './sql/postgres-process-paas:/docker-entrypoint-initdb.d:Z'
+      - './sql/postgres-process-paas/postgresql.conf:/etc/postgresql.conf'
+    command:
+      postgres -c config_file=/etc/postgresql.conf
+    healthcheck:
+      test:
+        - CMD
+        - pg_isready
+        - '-q'
+        - '-d'
+        - kogito
+        - '-U'
+        - kogito-user
+      timeout: 45s
+      interval: 10s
+      retries: 50
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+  postgres-kogito-patched-prometheus-exporter:
+    # See https://github.com/prometheus-community/postgres_exporter
+    container_name: postgres-kogito-patched-prometheus-exporter
+    image: 'quay.io/prometheuscommunity/postgres-exporter:v0.17.1'
+    profiles:
+      - full
+      - observability
+    ports:
+      - 9186:9187
+    environment:
+      DATA_SOURCE_URI: "postgres-kogito-patched:5432?sslmode=disable"
+      DATA_SOURCE_USER: postgres
+      DATA_SOURCE_PASS: postgres
+  postgres-kogito-non-patched-prometheus-exporter:
+    # See https://github.com/prometheus-community/postgres_exporter
+    container_name: postgres-kogito-non-patched-prometheus-exporter
+    image: 'quay.io/prometheuscommunity/postgres-exporter:v0.17.1'
+    profiles:
+      - full
+      - observability
+    ports:
+      - 9187:9187
+    environment:
+      DATA_SOURCE_URI: "postgres-kogito-non-patched:5432?sslmode=disable"
+      DATA_SOURCE_USER: postgres
+      DATA_SOURCE_PASS: postgres
+  postgres-process-paas-prometheus-exporter:
+    # See https://github.com/prometheus-community/postgres_exporter
+    container_name: postgres-process-paas-prometheus-exporter
+    image: 'quay.io/prometheuscommunity/postgres-exporter:v0.17.1'
+    profiles:
+      - full
+      - observability
+    ports:
+      - 9188:9187
+    environment:
+      DATA_SOURCE_URI: "postgres-process-paas:5432?sslmode=disable"
+      DATA_SOURCE_USER: postgres
+      DATA_SOURCE_PASS: postgres
+  pgadmin:
+    image: dpage/pgadmin4:9.1
+    container_name: pgadmin
+    profiles:
+      - full
+      - pgadmin
+    ports:
+      - 8055:80
+    volumes:
+      - ./pgadmin/servers.json:/pgadmin4/servers.json
+      - ./pgadmin/pgpass:/pgadmin4/pgpass
+    entrypoint: >
+      /bin/sh -c "
+      cp -f /pgadmin4/pgpass /var/lib/pgadmin/;
+      chmod 600 /var/lib/pgadmin/pgpass;
+      /entrypoint.sh
+      "
+    environment:
+      PGADMIN_DEFAULT_EMAIL: user@kogito.org
+      PGADMIN_DEFAULT_PASSWORD: pass
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      GUNICORN_ACCESS_LOGFILE: "/dev/null"
+  jaeger:
+    container_name: jaeger
+    #image: jaegertracing/jaeger:2.1.0
+    image: jaegertracing/jaeger:2.5.0
+    profiles:
+      - full
+      - observability
+    volumes:
+      - './jaeger/jaeger-ui.json:/etc/jaeger/jaeger-ui.json'
+    #command: '--query.ui-config /etc/jaeger/jaeger-ui.json'
+    environment:
+      - METRICS_STORAGE_TYPE=prometheus
+      - 'PROMETHEUS_SERVER_URL=http://prometheus:9090'
+      - >-
+        PROMETHEUS_QUERY_SUPPORT_SPANMETRICS_CONNECTOR=${PROMETHEUS_QUERY_SUPPORT_SPANMETRICS_CONNECTOR:-true}
+      - 'PROMETHEUS_QUERY_NAMESPACE=${PROMETHEUS_QUERY_NAMESPACE:-}'
+      - 'PROMETHEUS_QUERY_DURATION_UNIT=${PROMETHEUS_QUERY_DURATION_UNIT:-}'
+      - PROMETHEUS_QUERY_NORMALIZE_CALLS=true
+      - PROMETHEUS_QUERY_NORMALIZE_DURATION=true
+    ports:
+      - 16686:16686
+      - 14268:14268
+      - 14269:14269
+      - 14250:14250
+      - 5778:5778
+      - 9411:9411
+  otel_collector:
+    container_name: opentelemetry-collector
+    #image: otel/opentelemetry-collector-contrib:0.116.1
+    image: otel/opentelemetry-collector-contrib:0.123.0
+    profiles:
+      - full
+      - observability
+    volumes:
+      - >-
+        ./opentelemetry/otel-collector-config.yaml:/etc/otelcol/otel-collector-config.yaml:z
+    command: '--config=/etc/otelcol/otel-collector-config.yaml'
+    ports:
+      - '8889:8889'
+      - '13133:13133'
+      - '4317:4317'
+      - '4318:4318'
+      - '15680:55680'
+    depends_on:
+      - jaeger
+      - prometheus
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:v3.3.0
+    profiles:
+      - full
+      - observability
+    volumes:
+      - './prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:z'
+    ports:
+      - '19090:9090'
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:11.6.1
+    profiles:
+      - full
+      - dashboards
+    volumes:
+      - './grafana/grafana.ini:/etc/grafana/grafana.ini:z'
+      - >-
+       ./grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yaml:z
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    ports:
+      - '3000:3000'
+  wiremock-studio:
+    container_name: wiremock-studio
+    image: jizuzquiza/wiremock-studio:2.32.0-18
+    profiles:
+      - full
+      - mock-server
+    volumes:
+      - ./wiremock-data-storage:/home/wiremock:z
+    ports:
+    - 19000-19010:9000-9010
+  bamoe-maven-repository:
+    container_name: bamoe-maven-repository
+    image: quay.io/bamoe/maven-repository:9.2.0-ibm-0004
+    profiles:
+      - bamoe-maven-repository
+    ports:
+      - '8800:8080'

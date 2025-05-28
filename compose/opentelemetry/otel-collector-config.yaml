@@ -1,0 +1,90 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  # Data sources: metrics
+  prometheus/kogitobpmnapppatched:
+    config:
+      scrape_configs:
+        - job_name: kogito-bpmn-app-patched
+          metrics_path: '/q/metrics/prometheus'
+          scrape_interval: 5s
+          static_configs:
+            # Need to find a way to get metrics from a docker service with network_mode = host
+            #- targets: [kogito-bpmn-app-unsecured:8082,kogito-bpmn-app-secured:8081]
+            - targets: [kogito-bpmn-app-patched:8080]
+  prometheus/kogitobpmnappnonpatched:
+    config:
+      scrape_configs:
+        - job_name: kogito-bpmn-app-non-patched
+          metrics_path: '/q/metrics/prometheus'
+          scrape_interval: 5s
+          static_configs:
+            # Need to find a way to get metrics from a docker service with network_mode = host
+            #- targets: [kogito-bpmn-app-unsecured:8082,kogito-bpmn-app-secured:8081]
+            - targets: [kogito-bpmn-app-non-patched:8080]
+  prometheus/kogitopatcheddatabase:
+    config:
+      scrape_configs:
+        - job_name: kogito-patched-postgresql-database
+          metrics_path: '/metrics'
+          scrape_interval: 10s
+          static_configs:
+            - targets: [postgres-kogito-patched-prometheus-exporter:9187]
+  prometheus/kogitononpatcheddatabase:
+    config:
+      scrape_configs:
+        - job_name: kogito-non-patched-postgresql-database
+          metrics_path: '/metrics'
+          scrape_interval: 10s
+          static_configs:
+            - targets: [postgres-kogito-non-patched-prometheus-exporter:9187]
+  prometheus/processpaasdatabase:
+    config:
+      scrape_configs:
+        - job_name: processpaas-postgresql-database
+          metrics_path: '/metrics'
+          scrape_interval: 10s
+          static_configs:
+            - targets: [postgres-process-paas-prometheus-exporter:9187]
+
+exporters:
+  otlp/jaeger:
+    endpoint: "jaeger:4317"
+    tls:
+      insecure: true
+  prometheus:
+    endpoint: 0.0.0.0:8889
+  prometheusremotewrite:
+    endpoint: http://localhost:9090/api/v1/write
+    tls:
+      insecure: true
+  debug:
+    verbosity: detailed
+
+processors:
+  batch:
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/jaeger]
+      #exporters: [spanmetrics, otlp]
+    # The exporter name in this pipeline must match the spanmetrics.metrics_exporter name.
+    # The receiver is just a dummy and never used; added to pass validation requiring at least one receiver in a pipeline.
+    metrics:
+      receivers: [otlp,prometheus/kogitobpmnapppatched,prometheus/kogitobpmnappnonpatched,prometheus/kogitopatcheddatabase,prometheus/kogitononpatcheddatabase,prometheus/processpaasdatabase]
+    #  processors: [batch]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      exporters: [debug]
+    #metrics/spanmetrics:
+    #    receivers: [spanmetrics]
+    #    exporters: [prometheus]
+  
