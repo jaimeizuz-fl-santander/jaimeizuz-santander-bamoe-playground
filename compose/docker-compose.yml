@@ -382,8 +382,9 @@ services:
       - full
       - observability
     volumes:
-      - './jaeger/jaeger-ui.json:/etc/jaeger/jaeger-ui.json'
-    #command: '--query.ui-config /etc/jaeger/jaeger-ui.json'
+      - './jaeger/jaeger-ui.json:/etc/jaeger/jaeger-ui.json:Z'
+      - './jaeger/config-elasticsearch.yaml:/etc/jaeger/config.yml:Z'
+    command: '--config /etc/jaeger/config.yml'
     environment:
       - METRICS_STORAGE_TYPE=prometheus
       - 'PROMETHEUS_SERVER_URL=http://prometheus:9090'
@@ -446,6 +447,27 @@ services:
       - GF_AUTH_DISABLE_LOGIN_FORM=true
     ports:
       - '3000:3000'
+  elasticsearch:
+    container_name: elasticsearch
+    image: docker.io/elastic/elasticsearch:8.16.2
+    cpus: 2 
+    mem_limit: 2048m
+    profiles:
+      - full
+      - observability
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      ES_JAVA_OPTS: "-Xms512m -Xmx1024m"
+      discovery.type: "single-node"
+      xpack.security.enabled: "false"
+      cluster.routing.allocation.disk.threshold_enabled: "false"
+    healthcheck:
+     test: curl -s http://localhost:9200 >/dev/null || exit 1
+     interval: 20s
+     timeout: 10s
+     retries: 20
   wiremock-studio:
     container_name: wiremock-studio
     image: jizuzquiza/wiremock-studio:2.32.0-18
